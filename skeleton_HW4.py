@@ -15,8 +15,8 @@ from scipy.stats import multivariate_normal
 def main():
     
     # choose the scenario
-    scenario = 1    # all anchors are Gaussian
-    #scenario = 2    # 1 anchor is exponential, 3 are Gaussian
+    # scenario = 1    # all anchors are Gaussian
+    scenario = 2    # 1 anchor is exponential, 3 are Gaussian
     #scenario = 3    # all anchors are exponential
     
     # specify position of anchors
@@ -73,6 +73,7 @@ def parameter_estimation(reference_measurement,nr_anchors,p_anchor,p_ref):
         p_ref... reference point, 2x2 """
     params = np.zeros([1, nr_anchors])
     #TODO (1) check whether a given anchor is Gaussian or exponential
+
     #TODO (2) estimate the according parameter based 
     return params
 #--------------------------------------------------------------------------------
