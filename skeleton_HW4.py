@@ -6,8 +6,10 @@ import numpy as np
 import matplotlib.cm as cm
 import matplotlib.mlab as mlab
 import matplotlib.pyplot as plt
+from mpl_toolkits.mplot3d import Axes3D
 import scipy.stats as stats
 from scipy.spatial import distance
+
 
 from scipy.stats import multivariate_normal
 
@@ -55,10 +57,11 @@ def main():
     if (scenario == 3):
         # TODO: don't forget to plot joint-likelihood function for the first measurement
 
-        # 3) Postion estimation using numerical maximum likelihood
+        # 3) Position estimation using numerical maximum likelihood
         # TODO
-        position_estimation_numerical_ml(data, nr_anchors, p_anchor, params, p_true)
-
+        # position_estimation_numerical_ml(data, nr_anchors, p_anchor, params, p_true)
+        data_point = data[1, :]
+        position_estimation_data_point(data_point, nr_anchors, p_anchor, params)
         # 4) Position estimation with prior knowledge (we roughly know where to expect the agent)
         # TODO
         # specify the prior distribution
@@ -170,13 +173,18 @@ def position_estimation_data_point(data_point, nr_anchors, p_anchor, lambdas):
                     likehood[anch] = lambdas[anch]*np.exp(-lambdas[anch] * (data_point[anch] - distances[anch]))
                 else:
                     likehood[anch] = 0
-            jt_likehood[x_coord,y_coord] = np.prod(likehood)
+            jt_likehood[x_coord, y_coord] = np.prod(likehood)
     print(np.max(jt_likehood))
     ind = np.unravel_index(np.argmax(jt_likehood, axis=None), jt_likehood.shape)
     print("Coords: ",ind)
-    # p_est = jt_likehood[ind]
     coords_max = grid[:,ind[0],ind[1]]
     print(coords_max)
+
+    fig = plt.figure()
+    plt.title('joint-likelihood function over 200x200 grid')
+    ax = fig.gca(projection='3d')
+    surf = ax.plot_surface(-rows, rows, jt_likehood)
+    plt.show()
     return coords_max
 
 
