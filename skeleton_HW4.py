@@ -168,7 +168,8 @@ def position_estimation_least_squares(data, nr_anchors, p_anchor, p_true, use_ex
 
 
 def position_estimation_data_point(data_point, nr_anchors, p_anchor, lambdas):
-    rows = np.arange(-5, 5.05, 0.05)
+    rows = np.arange(-5, 5.05, 0.05) # step = 0.05 end = 5.05 is required in assignment text;
+                                     # step = 0.5  end = 5.5  is used to reduce comput. weight
     grid = np.meshgrid(rows, rows)
     grid = np.array(grid)
     jt_likehood = np.zeros([ rows.shape[0],rows.shape[0] ])
