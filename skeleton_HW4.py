@@ -59,16 +59,41 @@ def main():
 
         # 3) Position estimation using numerical maximum likelihood
         # TODO
-        # position_estimation_numerical_ml(data, nr_anchors, p_anchor, params, p_true)
-        data_point = data[1, :]
-        position_estimation_data_point(data_point, nr_anchors, p_anchor, params)
+
+        # ESTIMATE FOR ALL DATASET
+        coords_mean = position_estimation_numerical_ml(data, nr_anchors, p_anchor, params, p_true)
+
+        plt.figure()
+        plot_anchors_and_agent(nr_anchors, p_anchor, p_true, p_ref=None)
+        plt.hold(True)
+        plt.plot(coords_mean[0], coords_mean[1], 'g*')
+        plt.text(coords_mean[0] - 0.2, coords_mean[1] - 0.2, '$p_{est}$')
+        plt.show()
+
+        # ESTIMATE FOR JUST ONE DATAPOINT
+        # data_point = data[0, :]
+        # rows, coords_max, jt_likehood = position_estimation_data_point(data_point, nr_anchors, p_anchor, params)
+        # print('max_joint_prob: ', np.max(jt_likehood), 'Coords: ', coords_max)
+        #
+        # plt.figure()
+        # plot_anchors_and_agent(nr_anchors, p_anchor, p_true, p_ref=None)
+        # plt.hold(True)
+        # plt.plot(coords_max[0], coords_max[1], 'g*')
+        # plt.text(coords_max[0] + 0.2, coords_max[1] + 0.2, '$p_{est}$')
+        # plt.show()
+        #
+        # fig = plt.figure()
+        # plt.title('joint-likelihood function over 200x200 grid')
+        # ax = fig.gca(projection='3d')
+        # surf = ax.plot_surface(rows, rows, jt_likehood)
+        # plt.show()
+
         # 4) Position estimation with prior knowledge (we roughly know where to expect the agent)
         # TODO
         # specify the prior distribution
         prior_mean = p_true
         prior_cov = np.eye(2)
         position_estimation_bayes(data, nr_anchors, p_anchor, prior_mean, prior_cov, params, p_true)
-    print(params)
 
     pass
 
@@ -127,7 +152,6 @@ def position_estimation_least_squares(data, nr_anchors, p_anchor, p_true, use_ex
     tol = 1e-6  # tolerance
     max_iter = 50  # maximum iterations for GN
     p_start = np.random.uniform(-5, 5, [2])
-    p_true_vect = np.repeat(p_true, nr_samples)
     p_error = np.zeros([nr_samples])
 
     # TODO estimate position for  i in range(0, nr_samples)
@@ -157,7 +181,8 @@ def position_estimation_least_squares(data, nr_anchors, p_anchor, p_true, use_ex
 
 
 def position_estimation_data_point(data_point, nr_anchors, p_anchor, lambdas):
-    rows = np.arange(-5, 5.05, 0.05)
+    rows = np.arange(-5, 5.05, 0.05) # step = 0.05 end = 5.05 is required in assignment text;
+                                     # step = 0.5  end = 5.5  is used to reduce comput. weight
     grid = np.meshgrid(rows, rows)
     grid = np.array(grid)
     jt_likehood = np.zeros([ rows.shape[0],rows.shape[0] ])
@@ -174,18 +199,10 @@ def position_estimation_data_point(data_point, nr_anchors, p_anchor, lambdas):
                 else:
                     likehood[anch] = 0
             jt_likehood[x_coord, y_coord] = np.prod(likehood)
-    print(np.max(jt_likehood))
-    ind = np.unravel_index(np.argmax(jt_likehood, axis=None), jt_likehood.shape)
-    print("Coords: ",ind)
-    coords_max = grid[:,ind[0],ind[1]]
-    print(coords_max)
 
-    fig = plt.figure()
-    plt.title('joint-likelihood function over 200x200 grid')
-    ax = fig.gca(projection='3d')
-    surf = ax.plot_surface(-rows, rows, jt_likehood)
-    plt.show()
-    return coords_max
+    ind = np.unravel_index(np.argmax(jt_likehood, axis=None), jt_likehood.shape)
+    coords_max = grid[:, ind[0], ind[1]]
+    return rows, coords_max, jt_likehood
 
 
 # --------------------------------------------------------------------------------
@@ -199,13 +216,22 @@ def position_estimation_numerical_ml(data, nr_anchors, p_anchor, lambdas, p_true
         p_true... true position (needed to calculate error), 2x2 """
     nr_samples = np.size(data, 0)
     coordinates = np.zeros([ nr_samples, 2 ])
+    p_error = np.zeros([nr_samples])
 
-    for point in range(data.shape[0]):
-        coordinates[point] = position_estimation_data_point(data[point,:], nr_anchors, p_anchor, lambdas)
+    for point in range(nr_samples):
+        coordinates[point, :] = position_estimation_data_point(data[point,:], nr_anchors, p_anchor, lambdas)[1]
+        p_error[point] = distance.euclidean(coordinates[point, :], p_true)
+        print(point)
 
-    coord_mean = np.mean(coordinates,0)
-    print(coord_mean)
+    coord_mean = np.mean(coordinates, 0)
+    coord_cov = np.cov(coordinates.T)
+    print('Coord. mean: ', coord_mean, 'Coord. covariance: ', coord_cov)
 
+    mean_err = np.mean(p_error)
+    variance = np.power(np.std(p_error), 2)
+    print("Mean_err: ", mean_err, "Var_err: ", variance)
+
+    return coord_mean
     # TODO
     pass
 
@@ -237,7 +263,6 @@ def least_squares_GN(p_anchor, p_start, r, max_iter, tol):
     nr_anchors = p_anchor.shape
     Jd = np.zeros([nr_anchors[0], nr_anchors[1]])
     distances = np.zeros([nr_anchors[0]])
-    # p_old = p_start
 
     for iter in range(0, max_iter):
         for row in range(0, nr_anchors[0]):
