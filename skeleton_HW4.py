@@ -17,8 +17,12 @@ from scipy.stats import multivariate_normal
 def main():
     # choose the scenario
     # scenario = 1    # all anchors are Gaussian
-    # scenario = 2    # 1 anchor is exponential, 3 are Gaussian
-    scenario = 3  # all anchors are exponential
+    scenario = 2    # 1 anchor is exponential, 3 are Gaussian
+    # scenario = 3  # all anchors are exponential
+    # Choose Task number
+    # tasknum = 2    # Maximum likelihood estimation of model paramaters
+    tasknum = 31   # Least-squares estimation of position
+    # tasknum = 32 # Numerical maximum likelihood estimation
 
     # specify position of anchors
     p_anchor = np.array([[5, 5], [-5, 5], [-5, -5], [5, -5]])
@@ -45,19 +49,21 @@ def main():
 
     # 2) Position estimation using least squares
     # TODO
-    # position_estimation_least_squares(data, nr_anchors, p_anchor, p_true, True)
+    if(tasknum == 31): # Calculate position with all anchors
+        position_estimation_least_squares(data, nr_anchors, p_anchor, p_true, True)
 
-    if (scenario == 2):
-        p_anchor = np.array([[-5, 5], [-5, -5], [5, -5]])
-        nr_anchors = np.size(p_anchor, 0)
-        position_estimation_least_squares(data[:, 1:4], nr_anchors, p_anchor, p_true, True)
+    # if (scenario == 2): # Ignore the exponential anchor
+    #     p_anchor = np.array([[-5, 5], [-5, -5], [5, -5]])
+    #     nr_anchors = np.size(p_anchor, 0)
+    #     position_estimation_least_squares(data[:, 1:4], nr_anchors, p_anchor, p_true, True)
 
     if (scenario == 3):
         # TODO: don't forget to plot joint-likelihood function for the first measurement
 
         # 3) Postion estimation using numerical maximum likelihood
         # TODO
-        position_estimation_numerical_ml(data, nr_anchors, p_anchor, params, p_true)
+        if (tasknum == 32):
+            position_estimation_numerical_ml(data, nr_anchors, p_anchor, params, p_true)
 
         # 4) Position estimation with prior knowledge (we roughly know where to expect the agent)
         # TODO
@@ -72,15 +78,7 @@ def main():
 
 # --------------------------------------------------------------------------------
 # --------------------------------------------------------------------------------
-def parameter_estimation(reference_measurement, nr_anchors, p_anchor, p_ref):
-    """ estimate the model parameters for all 4 anchors based on the reference measurements, i.e., for anchor i consider reference_measurement[:,i]
-    Input:
-        reference_measurement... nr_measurements x nr_anchors
-        nr_anchors... scalar
-        p_anchor... position of anchors, nr_anchors x 2
-        p_ref... reference point, 2x2 """
-    params = np.zeros([1, nr_anchors])
-    # TODO (1) check whether a given anchor is Gaussian or exponential
+def data_indexes(nr_anchors, reference_measurement):
     distr_array = np.zeros(nr_anchors)
     baseline = np.sqrt(50)
 
@@ -91,6 +89,22 @@ def parameter_estimation(reference_measurement, nr_anchors, p_anchor, p_ref):
     # TODO (2) estimate the according parameter based
     gaus_indexes = np.where(distr_array == 0)
     exp_indexes = np.where(distr_array == 1)
+    return gaus_indexes, exp_indexes
+
+def parameter_estimation(reference_measurement, nr_anchors, p_anchor, p_ref):
+    """ estimate the model parameters for all 4 anchors based on the reference measurements, i.e., for anchor i consider reference_measurement[:,i]
+    Input:
+        reference_measurement... nr_measurements x nr_anchors
+        nr_anchors... scalar
+        p_anchor... position of anchors, nr_anchors x 2
+        p_ref... reference point, 2x2 """
+    params = np.zeros([1, nr_anchors])
+    baseline = np.sqrt(50)
+    # TODO (1) check whether a given anchor is Gaussian or exponential
+    #
+    gaus_indexes, exp_indexes = data_indexes(nr_anchors, reference_measurement)
+    # TODO (2) estimate the according parameter based
+
 
     if gaus_indexes[0].shape[0] > 0:
         dim_gaus = reference_measurement[:, gaus_indexes[0]].shape[0] * reference_measurement[:, gaus_indexes[0]].shape[
@@ -141,10 +155,10 @@ def position_estimation_least_squares(data, nr_anchors, p_anchor, p_true, use_ex
 
     print("Mean: ", mean_err, "Var: ", variance)
     plt.scatter(p_estimate[:,0], p_estimate[:,1])
-
+    # plt.show()
 
     plot_gauss_contour(est_mean, est_cov, np.min(p_estimate[:,0]), np.max(p_estimate[:,0])
-                       ,np.min(p_estimate[:,1]), np.max(p_estimate[:,1]), "PERGELE")
+                       ,np.min(p_estimate[:,1]), np.max(p_estimate[:,1]), "Distribution")
     plt.show()
 
     Fx,x  = ecdf(p_error)
